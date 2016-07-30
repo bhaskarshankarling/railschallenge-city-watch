@@ -1,6 +1,10 @@
 class Emergency < ActiveRecord::Base
 
-	validates :code, uniqueness: true 
+	validates :code, uniqueness: true, presence: true
+	validates :police_severity, presence: true, numericality: true
+	validates :fire_severity, presence: true, numericality: true
+	validates :medical_severity, presence: true, numericality: true
+
 	validates_with PermitedAttributes, fields: [:id]
 	
 	class << self
