@@ -1,5 +1,6 @@
 class EmergenciesController < ApplicationController
-	before_filter :check_severity_validity, only: :create 
+	before_filter :check_severity_validity, only: :create
+	
 	def create
 		emergency = Emergency.create_emergency(params[:emergency])
 		if emergency.save
