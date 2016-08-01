@@ -1,15 +1,23 @@
 class Emergency < ActiveRecord::Base
 
 	validates :code, uniqueness: true, presence: true
-	validates :police_severity, presence: true, numericality: true
-	validates :fire_severity, presence: true, numericality: true
-	validates :medical_severity, presence: true, numericality: true
+	validates :police_severity, presence: true, numericality: { greater_than_or_equal_to: 0 }
+	validates :fire_severity, presence: true, numericality: { greater_than_or_equal_to: 0 }
+	validates :medical_severity, presence: true, numericality: { greater_than_or_equal_to: 0 }
 
-	validates_with PermitedAttributes, fields: [:id]
-	
+	has_many :responders
+
+	def update_emergency(params)
+		self.update_attributes(self.class.sanitized_params(params))
+	end
+
 	class << self
 		def create_emergency(params)
-			attributes = params.reduce({}) do |attrs, (attribute, value)|
+			new(sanitized_params(params))
+		end
+
+		def sanitized_params(params)
+			params.reduce({}) do |attrs, (attribute, value)|
 				if attribute.to_s.scan(/_severity/).present?
 					attrs[attribute] = value.to_i
 				else
@@ -17,7 +25,6 @@ class Emergency < ActiveRecord::Base
 				end
 				attrs
 			end
-			new(attributes)
 		end
 	end
 end

@@ -1,53 +1,49 @@
 class EmergenciesController < ApplicationController
-	before_filter :check_severity_validity, only: :create
-	
-	def create
-		emergency = Emergency.create_emergency(params[:emergency])
-		if emergency.save
-			response = {
-				emergency: {
-					code: params[:emergency][:code],
-					fire_severity: params[:emergency][:fire_severity].to_i,
-					police_severity: params[:emergency][:police_severity].to_i,
-					medical_severity: params[:emergency][:medical_severity].to_i
-				}
-			}
-			status = 201
+
+	def index
+		emergencies = { emergencies: Emergency.all.entries, full_responses: [Emergency.where(is_served: true).count, Emergency.count] }
+		render json: emergencies, status: 200
+	end
+
+	def show
+		emergency = Emergency.where(code: params[:code]).first
+		if emergency.present?
+			response = { emergency: emergency }
+			status = 200
 		else
-			response = {
-				message: emergency.errors.messages
-			}
-			status = 422
+			response = { }
+			status = 404
 		end
 
-		render json: response, status: status, body: { message: nil }
+		render json: response, status: status
+	end
+
+	def create
+		emergency_handler_system = EmergencyHandler::init(emergency_create_params)
+		emergency_handler_system.dispatch_responders
+		render emergency_handler_system.response
+	end
+
+	def update
+		emergency = Emergency.where(code: params[:code]).first
+		if emergency.update_emergency(emergency_update_params)
+			response = { emergency: emergency }
+			status = 200
+		else
+			response = { }
+			status = 404
+		end		
+
+		render json: response, status: status
 	end
 
 	private
 
-		def valid_severity?
-			valid_severity_flag = true
-			params[:emergency].each do |key, value|
-				if value.eql?("-1")
-					valid_severity_flag = false
-					break
-				end
-			end
-			valid_severity_flag
+		def emergency_create_params
+			params.require(:emergency).permit(:code, :police_severity, :fire_severity, :medical_severity)
 		end
 
-		def check_severity_validity
-			unless valid_severity?
-				response = {
-					message: {
-						fire_severity: ['must be greater than or equal to 0'],
-						police_severity: ['must be greater than or equal to 0'],
-						medical_severity: ['must be greater than or equal to 0']
-					}
-				}
-
-				render json: response, status: 422
-			end
+		def emergency_update_params
+			params.require(:emergency).permit(:police_severity, :fire_severity, :medical_severity, :resolved_at)
 		end
-
 end
